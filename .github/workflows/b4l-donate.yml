@@ -1,0 +1,49 @@
+name: B4L donate window
+run-name: b4l-donate ${{ inputs.minutes }} min ${{ inputs.tag }}
+# Written by the B4L app. ONE bounded window of the B4L grid node (compiled, pinned by its sha256; no source) for the
+# minutes asked, then it stops. Only the app starts it: no schedule, and it never starts another. The grid credits
+# your B4L account by the repository variable B4L_EMAIL; B4L_NICKNAME is the name the grid shows.
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: 'minutes to lend (5 to 60)'
+        default: '30'
+      tag:
+        description: 'the name the app gives this window'
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: b4l-donate
+  cancel-in-progress: false
+jobs:
+  donate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - name: Get the B4L grid node 1.23.0 (compiled, checked against its sha256)
+        run: |
+          curl -fsSL --max-time 600 "https://compute.bull4life.com/release/b4l_node-1.23.0.exe" -o b4l_node
+          echo "4cd84edae6fb4cbf38010178db43e1867259d528f13da167a333fac1c541a5b8  b4l_node" | sha256sum -c -
+          chmod +x b4l_node
+      - name: Lend the window
+        env:
+          MINUTES: ${{ inputs.minutes }}
+          B4L_COORDINATOR: https://compute.bull4life.com
+          B4L_EMAIL: ${{ vars.B4L_EMAIL }}
+          B4L_NICKNAME: ${{ vars.B4L_NICKNAME }}
+          B4L_NODE_ID: b4l-gh-${{ github.repository_id }}
+          B4L_POWER: '100'
+          B4L_END_DATE: '2026-07-21'
+        run: |
+          [[ "$MINUTES" =~ ^[0-9]{1,2}$ ]] && [ "$MINUTES" -ge 5 ] && [ "$MINUTES" -le 60 ] || { echo "minutes must be 5 to 60"; exit 1; }
+          end=$(( $(date +%s) + MINUTES * 60 ))
+          # the node updates itself to the release the grid signs, then exits: start it again until the window is over
+          while [ "$(date +%s)" -lt "$end" ]; do
+            left=$(( end - $(date +%s) ))
+            [ "$left" -le 5 ] && break
+            timeout "$left" ./b4l_node --run || true
+            sleep 2
+          done
+          echo "the window is over"
