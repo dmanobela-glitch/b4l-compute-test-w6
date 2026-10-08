@@ -1,0 +1,51 @@
+name: B4L hunt
+run-name: b4l-hunt ${{ inputs.job }}
+# Written by the B4L app. One hunt of your own strategy on your own prices (jobs/<job>.json, data/), then its result,
+# SEALED to your B4L app's key, kept in results/. Only the app starts it (workflow_dispatch): no schedule.
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: 'the job: jobs/<job>.json'
+        required: true
+      minutes:
+        description: 'stop after this many minutes (1 to 60)'
+        default: '20'
+permissions:
+  contents: write
+concurrency:
+  group: b4l-hunt-${{ inputs.job }}
+  cancel-in-progress: false
+jobs:
+  hunt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check the job and the compiled hunt
+        env:
+          JOB: ${{ inputs.job }}
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          [[ "$JOB" =~ ^[A-Za-z0-9_-]{1,64}$ ]] || { echo "the job name must be letters, digits, _ or -"; exit 1; }
+          [[ "$MINUTES" =~ ^[0-9]{1,2}$ ]] && [ "$MINUTES" -ge 1 ] && [ "$MINUTES" -le 60 ] || { echo "minutes must be 1 to 60"; exit 1; }
+          echo "63df5f38a6ee36b939641c2641b981eb0c2971f8cd8620a708f739d4e0c697e8  bin/b4l-hunt.mjs" | sha256sum -c -
+      - name: Hunt (the result leaves the runner sealed)
+        env:
+          JOB: ${{ inputs.job }}
+          MINUTES: ${{ inputs.minutes }}
+          B4L_RESULTS_KEY: ${{ vars.B4L_RESULTS_KEY }}
+        run: timeout "$(( MINUTES * 60 ))" node bin/b4l-hunt.mjs "jobs/$JOB.json" "results/$JOB.b4l"
+      - name: Keep the sealed result
+        env:
+          JOB: ${{ inputs.job }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "results/$JOB.b4l"
+          git commit -q -m "b4l: sealed result $JOB"
+          for i in 1 2 3; do git push -q && exit 0; git pull -q --rebase; done
+          exit 1
