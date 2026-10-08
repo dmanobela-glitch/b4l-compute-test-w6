@@ -1,0 +1,44 @@
+{
+ "schema": "b4l.hunt/1",
+ "id": "hunt_20261008_234249",
+ "data": {
+  "id": "btc_usdt_1h",
+  "label": "BTC/USDT 1h"
+ },
+ "strategy": {
+  "schema": "b4l.user_strategy/1",
+  "name": "My MA cross",
+  "plugin": "ma_cross",
+  "params": {
+   "fast": 20,
+   "slow": 50
+  },
+  "settings": {
+   "start_usd": 250,
+   "fee_pct": 0.055,
+   "slippage_bps": 2,
+   "leverage": 1,
+   "allow_short": true
+  },
+  "rule": {
+   "min_trades": 20,
+   "min_return_pct": 0,
+   "max_drawdown_pct": 40,
+   "min_sharpe": null,
+   "beat_hold": false
+  }
+ },
+ "grid": {
+  "fast": [
+   10,
+   20,
+   30
+  ],
+  "slow": [
+   30,
+   50,
+   70
+  ]
+ },
+ "created": "2026-10-08T23:42:49Z"
+}
