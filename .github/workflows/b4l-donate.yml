@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       minutes:
-        description: 'minutes to lend (5 to 60)'
-        default: '30'
+        description: 'minutes to lend (70 to 350)'
+        default: '120'
       tag:
         description: 'the name the app gives this window'
         default: ''
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   donate:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 358
     steps:
       - name: Get the B4L grid node 1.23.0 (compiled, checked against its sha256)
         run: |
@@ -37,7 +37,7 @@ jobs:
           B4L_POWER: '100'
           B4L_END_DATE: '2026-07-21'
         run: |
-          [[ "$MINUTES" =~ ^[0-9]{1,2}$ ]] && [ "$MINUTES" -ge 5 ] && [ "$MINUTES" -le 60 ] || { echo "minutes must be 5 to 60"; exit 1; }
+          [[ "$MINUTES" =~ ^[0-9]{1,3}$ ]] && [ "$MINUTES" -ge 70 ] && [ "$MINUTES" -le 350 ] || { echo "minutes must be 70 to 350"; exit 1; }
           end=$(( $(date +%s) + MINUTES * 60 ))
           # the node updates itself to the release the grid signs, then exits: start it again until the window is over
           while [ "$(date +%s)" -lt "$end" ]; do
